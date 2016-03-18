@@ -23,7 +23,7 @@ public class MailSenderTest {
                 .port(wiser.getServer().getPort())
                 .protocol("smtp")
                 .build()
-                .send("TestSubject", "TestBody", singletonList("mail@example.com"));
+                .send(Mail.builder().subject("TestSubject").message("TestBody").recipient("mail@example.com").build());
         assertEquals(1, wiser.getMessages().size());
         MimeMessage message = wiser.getMessages().get(0).getMimeMessage();
         assertEquals("TestBody\r\n", message.getContent());

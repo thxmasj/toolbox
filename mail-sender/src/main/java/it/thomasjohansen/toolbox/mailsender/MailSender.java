@@ -11,7 +11,6 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
-import java.util.List;
 import java.util.Properties;
 
 import static javax.mail.internet.MimeUtility.encodeText;
@@ -26,50 +25,63 @@ public class MailSender {
     private boolean enableStartTls;
     private int port;
 
-    public void send(String subject, String message, List<String> recipients) {
+    public void send(Mail mail) throws InvalidAddress, MessageBuildingFailed, SendingFailed {
         Session session = createSession();
-        MimeMessage msg = new MimeMessage(session);
-        final Date sentDate = new Date();
-        InternetAddress[] toAddress = recipients.stream().map(this::toAddress).toArray(size -> new InternetAddress[size]);
-
+        Message message = createMessage(session, mail);
         try {
-            msg.setText(message, "UTF-8");
+            createTransport(session).sendMessage(message, message.getAllRecipients());
         } catch (MessagingException e) {
-            throw new RuntimeException("Failed to set Body", e);
-        }
-        try {
-            msg.setFrom(fromAddress);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to set From", e);
-        }
-        try {
-            msg.setRecipients(Message.RecipientType.TO, toAddress);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to set To", e);
-        }
-        try {
-            msg.setSubject(encodeText(subject, "UTF-8", "B"));
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to set Subject", e);
-        }
-        try {
-            msg.setSentDate(sentDate);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to set Date", e);
-        }
-        try {
-            createTransport(session).sendMessage(msg, toAddress);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send message", e);
+            throw new SendingFailed(e);
         }
     }
 
-    private InternetAddress toAddress(String recipient) {
+    private InternetAddress toInternetAddress(String address) throws InvalidAddress {
         try {
-            return new InternetAddress(recipient);
+            return new InternetAddress(address);
         } catch (AddressException e) {
-            throw new IllegalArgumentException("Invalid recipient");
+            throw new InvalidAddress(address, e);
         }
+    }
+
+    private Message createMessage(Session session, Mail mail) throws MessageBuildingFailed {
+        MimeMessage msg = new MimeMessage(session);
+        Date sentDate = new Date();
+        try {
+            msg.setContent(mail.getMessage(), "text/plain; charset=UTF-8");
+            msg.setFrom(fromAddress);
+            InternetAddress[] toAddress = mail.getRecipients().stream()
+                    .map(this::toInternetAddress).toArray(InternetAddress[]::new);
+            msg.setRecipients(Message.RecipientType.TO, toAddress);
+            msg.setSubject(encodeText(mail.getSubject(), "UTF-8", "B"));
+            msg.setSentDate(sentDate);
+            return msg;
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new MessageBuildingFailed(e);
+        }
+    }
+
+    public static class SendingFailed extends RuntimeException {
+
+        public SendingFailed(Throwable cause) {
+            super("Failed to send message", cause);
+        }
+
+    }
+
+    public static class InvalidAddress extends RuntimeException {
+
+        public InvalidAddress(String address, Throwable cause) {
+            super("Invalid address: " + address, cause);
+        }
+
+    }
+
+    public static class MessageBuildingFailed extends RuntimeException {
+
+        public MessageBuildingFailed(Throwable cause) {
+            super("Failed to build message", cause);
+        }
+
     }
 
     private Session createSession() {

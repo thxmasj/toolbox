@@ -12,7 +12,7 @@
     <artifactId>demo</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>mail-queue</module>
+        <module>mail-spool</module>
     </modules>
 
 

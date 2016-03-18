@@ -19,6 +19,12 @@ public class HazelcastBuilder {
         return this;
     }
 
+    public HazelcastBuilder members(String...members) {
+        for (String member : members)
+            config.getNetworkConfig().getJoin().getTcpIpConfig().addMember(member);
+        return this;
+    }
+
     public HazelcastBuilder port(int port) {
         config.getNetworkConfig().setPort(port);
         return this;

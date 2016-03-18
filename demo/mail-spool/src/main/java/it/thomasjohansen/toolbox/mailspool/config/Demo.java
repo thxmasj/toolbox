@@ -1,10 +1,11 @@
-package it.thomasjohansen.toolbox.mailqueue.config;
+package it.thomasjohansen.toolbox.mailspool.config;
 
 import com.hazelcast.core.HazelcastInstance;
 import it.thomasjohansen.toolbox.hazelcast.HazelcastBuilder;
 import it.thomasjohansen.toolbox.hazelcast.HazelcastClientBuilder;
-import it.thomasjohansen.toolbox.mailqueue.MailQueue;
+import it.thomasjohansen.toolbox.mailsender.Mail;
 import it.thomasjohansen.toolbox.mailsender.MailSender;
+import it.thomasjohansen.toolbox.mailspool.MailSpool;
 import it.thomasjohansen.toolbox.socket.AvailablePort;
 import org.subethamail.wiser.Wiser;
 
@@ -24,13 +25,18 @@ public class Demo {
         HazelcastInstance hazelcast = new HazelcastBuilder()
                 .port(hazelcastPort)
                 .build();
-        MailQueue mailQueue = new MailQueue(
-                hazelcast.getQueue("mail-queue"),
-                MailSender.builder()
+        MailSpool<String> mailSpool = MailSpool.<String>builder()
+                .queue(hazelcast.getQueue("mail-queue"))
+                .sender(MailSender.builder()
                         .host("localhost")
                         .port(smtpPort)
-                        .build()
-        );
+                        .build())
+                .mailBuilder(t -> Mail.builder()
+                        .message("TestMessage")
+                        .subject("TestSubject")
+                        .recipient(t)
+                        .build())
+                .build();
         HazelcastInstance hazelcastClient = new HazelcastClientBuilder()
                 .address("localhost:" + hazelcastPort)
                 .build();
