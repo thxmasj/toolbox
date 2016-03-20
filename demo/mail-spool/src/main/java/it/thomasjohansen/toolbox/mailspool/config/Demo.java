@@ -25,7 +25,7 @@ public class Demo {
         HazelcastInstance hazelcast = new HazelcastBuilder()
                 .port(hazelcastPort)
                 .build();
-        MailSpool<String> mailSpool = MailSpool.<String>builder()
+        MailSpool.<String>builder()
                 .queue(hazelcast.getQueue("mail-queue"))
                 .sender(MailSender.builder()
                         .host("localhost")
